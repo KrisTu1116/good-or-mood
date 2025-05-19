@@ -1,0 +1,422 @@
+/* ==============================
+   1. 整体页面
+============================== */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: #f0f0f0;
+}
+
+/* ==============================
+   2. 主体圆形 (宠物容器)
+============================== */
+#pet-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999999;
+
+  /* 保持原先的可见大小为 80×80，不做改变 */
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #F2F2F2; /* 浅灰 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s;
+}
+
+/* 
+  关键优化：使用 ::before 伪元素扩展 hover 范围，
+  确保鼠标在按钮间移动时，仍在容器（含伪元素）内部，
+  不会出现"闪烁"问题。
+*/
+#pet-container::before {
+  content: "";
+  position: absolute;       /* 相对于 #pet-container */
+  /* 让伪元素四面各多出约30px的区域，可根据需要微调 */
+  left: -30px;
+  top: -30px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: transparent;  /* 保持透明 */
+  pointer-events: auto;     /* 能触发 hover */
+}
+
+#pet-container:active {
+  cursor: grabbing;
+}
+
+#pet-container:hover {
+  transform: scale(1.03);
+}
+
+/* 中心表情 */
+#emoji {
+  font-size: 40px;
+  line-height: 1;
+  pointer-events: none;
+  margin: 0;
+  transform: translateY(-2px);
+  display: inline-block;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  transform-origin: center center; /* 关键：指定变换原点为元素中心 */
+  
+}
+
+/* ==============================
+   3. 按钮样式
+============================== */
+.mood-button {
+  position: absolute;
+  width: 37px;
+  height: 37px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+
+  /* [修改点 2] 改为只用opacity控制显示，去掉visibility */
+  opacity: 0;              /* 默认透明 */
+  pointer-events: none;    /* 禁止鼠标交互 */
+  transition: opacity 0.3s ease; /* 平滑过渡 */
+}
+
+/* [修改点 3] 当鼠标悬停在#pet-container时，才让.mood-button可见 */
+#pet-container:hover .mood-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 悬停按钮本身时也保持可见，不要闪烁 */
+.mood-button:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* +1 按钮（左上角） */
+.plus-button {
+  background-color: rgba(76, 175, 80, 0.55); /* 半透明绿色 */
+  top: -15px;
+  left: -15px;
+}
+
+/* -1 按钮（右上角） */
+.minus-button {
+  background-color: rgba(244, 67, 54, 0.55); /* 半透明红色 */
+  top: -15px;
+  right: -15px;
+}
+
+/* 左中按钮 */
+.left-mid-button {
+  background-color: rgba(76, 175, 80, 0.55);
+  left: -35px;
+}
+
+/* 左下按钮 */
+.left-bottom-button {
+  background-color: rgba(76, 175, 80, 0.55);
+  bottom: -15px;
+  left: -15px;
+}
+
+/* 右中按钮 */
+.right-mid-button {
+  background-color: rgba(244, 67, 54, 0.55);
+  right: -35px;
+}
+
+/* 右下按钮 */
+.right-bottom-button {
+  background-color: rgba(244, 67, 54, 0.55);
+  bottom: -15px;
+  right: -15px;
+}
+
+/* 点击动画: 放大 & 回弹 */
+.mood-button.clicked {
+  transform: scale(1.4);
+}
+
+/* 悬停时微微放大、加深背景 */
+.mood-button:hover {
+  transform: scale(1.08);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ==============================
+   5. 优化内嵌式弹窗
+============================== */
+/* 弹窗容器优化 */
+#modal-container {
+  position: fixed;
+  padding: 15px;
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  display: none; /* 默认隐藏 */
+  z-index: 9999;
+  font-family: sans-serif;
+  transition: all 0.3s ease;
+  overflow: auto;
+  width: auto; /* 动态宽度 */
+  height: auto; /* 动态高度 */
+  max-width: 80%; /* 最大宽度为窗口的 80% */
+  max-height: 80%; /* 最大高度为窗口的 80% */
+  min-width: 200px; /* 最小宽度 */
+  min-height: 100px; /* 最小高度 */
+}
+
+/* 弹窗标题 */
+#modal-title {
+  font-size: 18px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+
+/* 关闭按钮 */
+#close-modal-btn {
+  margin-top: 10px;
+  cursor: pointer;
+  background-color: #eee;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  transition: background-color 0.2s;
+  float: right;
+}
+#close-modal-btn:hover {
+  background-color: #ddd;
+}
+
+#modal-content input[type="text"],
+#modal-content input[type="number"] {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 6px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#modal-content button {
+  cursor: pointer;
+  background-color: #3f51b5;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  transition: background-color 0.2s;
+  margin-right: 10px;
+}
+#modal-content button:hover {
+  background-color: #2c3eab;
+}
+
+/* ==============================
+   6. 日历
+============================== */
+
+.mood-calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+.mood-calendar-table th,
+.mood-calendar-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  height: 40px;
+  vertical-align: middle;
+}
+.mood-calendar-table th {
+  background-color: #f5f5f5;
+}
+
+/* ==============================
+   轻量动画：加分/减分 & 表情变化
+============================== */
+
+/* 7.1 加分动画：小弹跳（plusBounce） */
+.plus-anim {
+  animation: plusBounce 0.3s ease forwards;
+}
+
+@keyframes plusBounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 7.2 减分动画：小幅左右晃动（minusShake） */
+.minus-anim {
+  animation: minusShake 0.3s ease;
+}
+
+@keyframes minusShake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* 7.3 中心表情变化动画：轻微缩放+淡入 (emojiChange) */
+.emoji-anim {
+  animation: emojiChange 0.3s ease;
+}
+
+@keyframes emojiChange {
+  0% {
+    transform: translateY(-2px) scale(1.2);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-2px) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==============================
+   阶段转换动画：分数增加 vs 分数减少
+============================== */
+
+/* 7.4 分数增加：向上旋转+放大+淡入 */
+.emoji-anim-up {
+  animation: thresholdUp 0.3s ease;
+}
+
+@keyframes thresholdUp {
+  0% {
+    transform: rotate(-10deg) scale(0.8) translateY(-2px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: rotate(0deg) scale(1) translateY(-2px) ;
+    opacity: 1;
+  }
+}
+
+/* 7.5 分数减少：向下倾斜+轻微缩放后恢复 */
+.emoji-anim-down {
+  animation: thresholdDown 0.3s ease;
+}
+
+@keyframes thresholdDown {
+  0% {
+    transform: rotate(10deg) scale(1.2) translateY(-2px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: rotate(0deg) scale(1) translateY(-2px);
+    opacity: 1;
+  }
+}
+
+/* 8.1 生气区间动画：红色光晕 */
+.anger-glow {
+  animation: angerGlow 0.4s ease forwards;
+}
+
+@keyframes angerGlow {
+  0% {
+    box-shadow: 0 0 0px rgba(255, 0, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(255, 0, 0, 0);
+  }
+}
+
+/* 8.2 开心区间动画：绿色光晕 */
+.happy-glow {
+  animation: happyGlow 0.4s ease forwards;
+}
+
+@keyframes happyGlow {
+  0% {
+    box-shadow: 0 0 0px rgba(0, 255, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(0, 255, 0, 0);
+  }
+}
+
+/* 9.1 Emoji Rating for Happy Event  */
+.rating-emoji {
+  font-size: 30px;
+  margin: 5px;
+  cursor: pointer;
+  filter: grayscale(100%);     /* 初始为灰度，呈黑白 */
+  transition: filter 0.3s, transform 0.3s;
+}
+
+.rating-emoji.colored {
+  filter: none;               /* 移除灰度，表情呈彩色 */
+  transform: scale(1.2);      /* 点击后轻微放大，制造"被选中"感 */
+}
+
+/* 日历标签导航 */
+.calendar-tab {
+  padding: 8px 15px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.calendar-tab:hover {
+  background-color: #f5f5f5;
+}
+
+.active-tab {
+  border-bottom: 2px solid #4285f4;
+  font-weight: bold;
+  color: #4285f4;
+}
+
+/* 标签内容区域 */
+.tab-content {
+  padding: 10px 0;
+}
+
+/* 移除设置按钮的样式，因为不再需要 */
+.settings-button {
+  display: none;
+}
+
